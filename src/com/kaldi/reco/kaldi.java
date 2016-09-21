@@ -12,6 +12,7 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.time.LocalDateTime;
 import java.util.Scanner;
+import java.util.StringTokenizer;
 
 import javax.websocket.server.PathParam;
 import javax.ws.rs.Consumes;
@@ -47,14 +48,29 @@ public class kaldi {
 	// This method is called if TEXT_PLAIN is request
 	  @GET
 	  @Produces(MediaType.TEXT_PLAIN)
-	  public static String reco_text (@QueryParam("fichier") String fichier) throws FileNotFoundException, IOException, InterruptedException{
+	  public static String new_reco_text(@QueryParam("fichier")  String fichier) throws FileNotFoundException, IOException, InterruptedException{
+		   
+			int[] i={0};
+			String[] res={"","",""};
+			affiche(reco_text(fichier),i,res);
+			if(i[0]<3){
+				  Process p;
+				    p = Runtime.getRuntime().exec("/home/kaldi/kaldi/egs/villes/get_nbest.sh /home/kaldi/kaldi/egs/villes/nbest/ /home/kaldi/kaldi/egs/villes/exp/tri3b_new/decode.si 0.1 "+fichier);
+				    p.waitFor();
+				nbest(i,res,fichier);}
+			return res[0]+" "+res[1]+" "+res[2];
+		   
+	   }
+	  
+	 
+	  public static String reco_text (String fichier) throws FileNotFoundException, IOException, InterruptedException{
 		converter(fichier); 
 		remove(fichier);
 		 //octaveTest(fichier);
 		  fichiers(fichier);
 		  script();
 		  String r=results("tri3b");
-		  return (r+"|\n"+LocalDateTime.now()+"\n\t"+fichier+"\n\t\ttri3b: "+r+"\n");
+		  return (r);
 		    }
 
 	  // This method is called if XML is request
@@ -121,7 +137,7 @@ public class kaldi {
 	     // for(int i=0; i<13; i++)
 	     // s.nextLine();
 	      //String h= s.nextLine().substring(5);
-	      f2=new File(reco_path+"/"+reco+"_test2/decode.si/log/decode.1.log");
+	      f2=new File(reco_path+"/"+reco+"_new/decode.si/log/decode.1.log");
 	       s=new Scanner(f2);
 	       for(int i=0; i<10; i++)
 	       s.nextLine();
@@ -168,5 +184,31 @@ return s.nextLine().substring(5);
 //	return output.toString();
 		} 
 	  
+		//functions used by the new version
+		public static void affiche(String r,int[] i,String[] res) throws FileNotFoundException{
+			  if(r!=""){
+			  StringTokenizer st=new StringTokenizer(r);
+			  while(st.hasMoreTokens()){
+				 String t=st.nextToken();
+				 if(i[0]==1){if(!t.contentEquals(res[0])){res[i[0]]=t; i[0]=i[0]+1;}}
+				 if(i[0]==2){if(!t.contentEquals(res[0]) && !t.contentEquals(res[1])){res[i[0]]=t; i[0]=i[0]+1;}}
+				 if(i[0]==0){res[i[0]]=t; i[0]=i[0]+1;}  
+			  }}
+			 // System.out.println("\n1: "+res[0]+"\n"+"2: "+res[1]+"\n3: "+res[2]+"\n taille: "+i[0]);
+			  }
+		  
+			  
+		  public static void nbest(int[] i,String[] res,String fichier) throws FileNotFoundException{
+			  File f=new File("/home/kaldi/kaldi/egs/villes/nbest/"+fichier+".all.nbest.roman");
+			  Scanner sc=new Scanner(f);
+			  while(i[0]!=3){
+				  String s=sc.nextLine();
+				  Scanner sc2=new Scanner(s);
+				  sc2.next();
+				  s=sc2.nextLine();
+				  affiche(s,i,res);
+				  
+				  }
 
+}
 }
